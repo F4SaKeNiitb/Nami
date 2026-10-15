@@ -1,0 +1,1 @@
+{"name":"nami-pi","private":true,"version":"0.0.0","description":"Pinned pi agent harness, run only by app/harness","dependencies":{"@earendil-works/pi-coding-agent":"1.0.3"}}

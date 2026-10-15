@@ -1,0 +1,25 @@
+[project]
+enable_telemetry = false
+user_env = []
+session_timeout = 3600
+user_session_timeout = 1296000
+cache = false
+allow_origins = ["*"]
+
+[features]
+unsafe_allow_html = false
+spontaneous_file_upload = { enabled = false }
+edit_message = false
+
+[features.mcp]
+enabled = false
+
+[UI]
+name = "Nami"
+default_theme = "dark"
+cot = "tool_call"
+custom_css = "/public/nami.css"
+default_sidebar_state = "closed"
+
+[meta]
+generated_by = "2.12.0"

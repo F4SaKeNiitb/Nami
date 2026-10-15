@@ -1,0 +1,19 @@
+# Runs the project's tests as a build step, in Azure, so the small VM and the live app are never involved. The build fails if a test fails, and the
+# log carries pytest's own output. Same pinned base as the production image; unlike it, this one installs the dev group (pytest...) and keeps tests/.
+FROM python:3.11-slim@sha256:6f31d6e9ba2b0a787a3f81c37b004155b87b9efa1b771182bd550c1615745be5
+COPY --from=ghcr.io/astral-sh/uv:0.9@sha256:538e0b39736e7feae937a65983e49d2ab75e1559d35041f9878b7b7e51de91e4 /uv /usr/local/bin/uv
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends bash git >/dev/null && rm -rf /var/lib/apt/lists/*
+WORKDIR /srv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --extra embeddings
+# Node for the research harness (same pinned image as production) and a real Chromium for the browser tests.
+COPY --from=node:22.20-bookworm-slim@sha256:b21fe589dfbe5cc39365d0544b9be3f1f33f55f3c86c87a76ff65a02f8f5848e /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:22.20-bookworm-slim@sha256:b21fe589dfbe5cc39365d0544b9be3f1f33f55f3c86c87a76ff65a02f8f5848e /usr/local/lib/node_modules /usr/local/lib/node_modules
+RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm && /srv/.venv/bin/python -m playwright install --with-deps chromium >/dev/null
+COPY . .
+RUN cd tools/pi && npm ci --ignore-scripts --omit=dev >/dev/null
+RUN cp dockerignore.original .dockerignore                 # the tests read the real .dockerignore (the build context itself was sent unfiltered)
+ENV PATH="/srv/.venv/bin:$PATH" PYTHONUNBUFFERED=1 NAMI_DEV_AUTH=1 NAMI_DEV_PASSWORD=dev NAMI_SMOKE_NO_DISPLAY=1
+# Everything runs. Tests that need real Redis skip themselves when NAMI_TEST_REDIS_URL is unset.
+ARG PYTEST_ARGS=''
+RUN bash infra/azure-vm/pytest_run.sh

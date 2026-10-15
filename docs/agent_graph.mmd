@@ -1,0 +1,71 @@
+---
+config:
+  flowchart:
+    curve: linear
+---
+graph TD;
+	__start__([<p>__start__</p>]):::first
+	intent(intent)
+	clarify(clarify)
+	access(access)
+	explore(explore)
+	ask_credentials(ask_credentials)
+	credentials_check(credentials_check)
+	connect_prepare(connect_prepare)
+	connect_wait(connect_wait)
+	connect_finish(connect_finish)
+	plan(plan)
+	gate(gate)
+	approve(approve)
+	run(run)
+	pause(pause)
+	verify(verify)
+	remember(remember)
+	finalize(finalize)
+	__end__([<p>__end__</p>]):::last
+	__start__ --> intent;
+	access -. &nbsp;ask&nbsp; .-> ask_credentials;
+	access -.-> explore;
+	access -.-> finalize;
+	access -.-> plan;
+	approve -.-> finalize;
+	approve -.-> run;
+	ask_credentials --> credentials_check;
+	clarify --> intent;
+	connect_finish -. &nbsp;connect_retry&nbsp; .-> connect_wait;
+	connect_finish -.-> finalize;
+	connect_finish -.-> plan;
+	connect_finish -.-> run;
+	connect_prepare --> connect_wait;
+	connect_wait --> connect_finish;
+	credentials_check -.-> access;
+	credentials_check -. &nbsp;ask&nbsp; .-> ask_credentials;
+	credentials_check -. &nbsp;connect&nbsp; .-> connect_prepare;
+	credentials_check -.-> finalize;
+	credentials_check -.-> run;
+	explore -.-> plan;
+	explore -.-> verify;
+	gate -.-> approve;
+	gate -. &nbsp;approve_blocked&nbsp; .-> finalize;
+	gate -.-> run;
+	gate -.-> verify;
+	intent -.-> access;
+	intent -.-> clarify;
+	intent -.-> finalize;
+	pause -.-> finalize;
+	pause -.-> run;
+	plan -.-> finalize;
+	plan -.-> gate;
+	remember --> finalize;
+	run -.-> approve;
+	run -. &nbsp;ask&nbsp; .-> ask_credentials;
+	run -.-> finalize;
+	run -.-> gate;
+	run -.-> pause;
+	run -.-> verify;
+	verify --> remember;
+	finalize --> __end__;
+	run -.-> run;
+	classDef default fill:#f2f0ff,line-height:1.2
+	classDef first fill-opacity:0
+	classDef last fill:#bfb6fc

@@ -1,0 +1,39 @@
+# Azure Container Apps: one replica (SQLite + websockets), app container + Redis sidecar. No secret values in this file:
+# every secret is a Key Vault reference resolved by the app's managed identity.
+properties:
+  configuration:
+    ingress: { external: true, targetPort: 8000, transport: auto, stickySessions: { affinity: sticky } }
+    secrets:
+      - { name: openai-key,     keyVaultUrl: "https://${KV_NAME}.vault.azure.net/secrets/openai-api-key",     identity: system }
+      - { name: kernel-key,     keyVaultUrl: "https://${KV_NAME}.vault.azure.net/secrets/kernel-api-key",     identity: system }
+      - { name: google-secret,  keyVaultUrl: "https://${KV_NAME}.vault.azure.net/secrets/google-client-secret", identity: system }
+      - { name: chainlit-auth,  keyVaultUrl: "https://${KV_NAME}.vault.azure.net/secrets/chainlit-auth-secret", identity: system }
+  template:
+    scale: { minReplicas: 1, maxReplicas: 1 }
+    containers:
+      - name: nami
+        image: "${ACR}.azurecr.io/nami@${IMAGE_DIGEST}"
+        resources: { cpu: 0.5, memory: 1Gi }
+        probes:
+          - { type: Liveness,  httpGet: { path: /healthz, port: 8000 }, periodSeconds: 30 }
+          - { type: Readiness, httpGet: { path: /healthz, port: 8000 }, periodSeconds: 10 }
+        env:
+          - { name: NAMI_OPENAI_API_KEY,      secretRef: openai-key }
+          - { name: NAMI_LLM_PROVIDER,        value: openai }
+          - { name: NAMI_KERNEL_API_KEY,      secretRef: kernel-key }
+          - { name: OAUTH_GOOGLE_CLIENT_ID,   value: "${GOOGLE_CLIENT_ID}" }
+          - { name: OAUTH_GOOGLE_CLIENT_SECRET, secretRef: google-secret }
+          - { name: CHAINLIT_AUTH_SECRET,     secretRef: chainlit-auth }
+          - { name: NAMI_BROWSER_PROVIDER,    value: kernel }
+          - { name: NAMI_KMS_PROVIDER,        value: azure }
+          - { name: NAMI_AZURE_KEY_VAULT_URL, value: "https://${KV_NAME}.vault.azure.net" }
+          - { name: NAMI_REDIS_URL,           value: "redis://localhost:6379/0" }
+          - { name: NAMI_SKILLS_FREEZE,       value: "1" }
+          - { name: NAMI_BLOB_ACCOUNT,        value: "${BLOB_ACCOUNT}" }
+          - { name: NAMI_BLOB_CONTAINER,      value: nami-db }
+          - { name: NAMI_ADMIN_EMAILS,        value: "${ADMIN_EMAILS}" }
+          - { name: NAMI_ALLOWED_EMAIL_DOMAINS, value: "${ALLOWED_DOMAINS}" }
+      - name: redis
+        image: docker.io/library/redis:8-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
+        command: [redis-server, --save, "", --appendonly, "no", --maxmemory, 128mb, --maxmemory-policy, allkeys-lru, --bind, 127.0.0.1]
+        resources: { cpu: 0.25, memory: 256Mi }

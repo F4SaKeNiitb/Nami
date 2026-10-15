@@ -1,0 +1,17 @@
+[Unit]
+Description=Nami (app + Caddy)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+WorkingDirectory=/opt/nami
+EnvironmentFile=/opt/nami/host.env
+ExecStartPre=/opt/nami/fetch-secrets.sh
+ExecStart=/usr/bin/docker compose up --remove-orphans
+ExecStop=/usr/bin/docker compose down
+Restart=always
+RestartSec=10
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target

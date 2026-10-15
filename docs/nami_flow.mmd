@@ -1,0 +1,64 @@
+flowchart TD
+    U(["You type a request"]) --> SF{"Contains a<br/>secret?"}
+    SF -- yes --> R1["Refused: use the secure form"]
+    SF -- no --> MEM{"remember or forget<br/>command?"}
+    MEM -- yes --> M1["Memory saved or removed"]
+    MEM -- no --> INT
+
+    subgraph UNDERSTAND["1 Understand"]
+        INT["intent<br/>what, which site, login?, sensitive action?"]
+        INT -- unclear --> CL["clarify<br/>ask ONE question"] --> INT
+        INT -- not possible / harmful --> FIN
+    end
+
+    INT --> ACC
+    subgraph DECIDE["2 Decide what is allowed, in plain code"]
+        ACC["access plan<br/>sites, saved logins, approvals<br/>from YOUR words only"]
+        ACC -- blocked by your rules --> FIN
+        ACC -- nothing saved for the site --> ASK["ask in chat<br/>secure form, never the chat text"]
+        ASK --> CHK["credentials_check<br/>added? right site?"]
+        CHK -- not usable, max 2 tries --> ASK
+        CHK -- usable --> ACC
+        CHK -. you click Sign in once .-> WIN["one-time secure window"] --> PLAN
+    end
+
+    ACC -- read-only, no login,<br/>no approval --> EXP
+    ACC -- Gmail or Drive --> GAPI["Google API<br/>connected account"]
+    ACC -- saved API key --> API["API route<br/>read or generate"]
+    ACC -- everything else --> PLAN
+
+    subgraph FAST["3a Open-ended reading: pi harness, boxed in"]
+        EXP["explore<br/>only web_open and escalate<br/>allowed sites, no vault"]
+    end
+    EXP -- answer + pages read --> VER
+    EXP -. login wall, error, no pages .-> PLAN
+
+    subgraph SAFE["3b Careful path: deterministic"]
+        PLAN["plan<br/>subgoals with success checks"] --> GATE
+        GATE{"gate<br/>irreversible?"}
+        GATE -- yes --> APP["approve<br/>you see items, total, card"] 
+        APP -- approved --> RUN
+        APP -- cancelled --> FIN
+        GATE -- no --> RUN
+        RUN["run<br/>browser agent, secrets as placeholders<br/>then validator checks the page"]
+        RUN -- ok, more steps --> GATE
+        RUN -- code needed --> CODE["ask for the code in chat<br/>kept in memory, used once"] --> RUN
+        RUN -- CAPTCHA / passkey --> OFFER["offer a secure window<br/>only if you click"] --> RUN
+        RUN -- login rejected or expired --> ASK
+        RUN -- fails, retry then replan, budget --> RUN
+    end
+    GAPI --> GATE
+    API --> GATE
+    RUN -- all steps done --> VER
+
+    VER["verify<br/>check the real result,<br/>say honestly if unsure"] --> REM["remember<br/>maybe learn a skill"] --> FIN
+    FIN(["finalize: answer, links, images to the chat"])
+
+    classDef you fill:#e8f0fe,stroke:#4285f4;
+    classDef safe fill:#e6f4ea,stroke:#34a853;
+    classDef loose fill:#fef7e0,stroke:#f9ab00;
+    classDef stop fill:#fce8e6,stroke:#ea4335;
+    class U,ASK,CHK,APP,CODE,OFFER,WIN you;
+    class ACC,PLAN,GATE,RUN,VER,GAPI,API safe;
+    class EXP loose;
+    class R1,FIN stop;

@@ -1,0 +1,20 @@
+# Continuous replication of every SQLite file to Azure Blob. Retention 72 h (crypto-shred completes after retention).
+# Credentials come from the container's managed identity / env, never from this file.
+dbs:
+  - path: /srv/data/nami.db
+    replicas:
+      - &blob
+        type: abs
+        account-name: ${NAMI_BLOB_ACCOUNT}
+        bucket: ${NAMI_BLOB_CONTAINER}
+        path: nami
+        retention: 72h
+        sync-interval: 1s
+  - path: /srv/data/chainlit.db
+    replicas:
+      - <<: *blob
+        path: chainlit
+  - path: /srv/data/graph_checkpoints.db
+    replicas:
+      - <<: *blob
+        path: checkpoints

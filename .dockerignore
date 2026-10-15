@@ -1,0 +1,14 @@
+.venv
+data
+.env
+.git
+__pycache__
+*.pyc
+.pytest_cache
+docs
+tests
+ManishFinal.pdf
+tools/pi/node_modules
+.files
+.chainlit/.langchain.db
+*.log

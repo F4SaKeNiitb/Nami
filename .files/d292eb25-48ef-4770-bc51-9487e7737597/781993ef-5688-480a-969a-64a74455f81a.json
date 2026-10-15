@@ -1,0 +1,1 @@
+{"site": "google.com", "kinds": ["password", "totp"], "lock_site": true, "purpose": "reauth"}

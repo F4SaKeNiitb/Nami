@@ -1,0 +1,22 @@
+name: ci
+on: [push, pull_request]
+permissions: { contents: read }
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv lock --check                          # lockfile must match pyproject (hashes pinned)
+      - run: uv sync --frozen
+      - run: uv run playwright install --with-deps chromium
+      - run: uv run pytest -q                         # includes the leak, authz, identity, skills and drift suites
+      - run: PYTHONPATH=. uv run python scripts/smoke_graph.py
+  supply-chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv export --frozen --no-dev --format requirements-txt > /tmp/req.txt
+      - run: uvx pip-audit -r /tmp/req.txt --require-hashes --strict     # known-vulnerable dependency fails the build
+      - run: uv run --frozen pytest -q tests/test_supply_chain.py

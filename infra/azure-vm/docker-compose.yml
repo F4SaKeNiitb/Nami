@@ -1,0 +1,23 @@
+# Nami + Caddy (automatic HTTPS) on one small VM. No Redis: the semantic cache is the only thing that wants it, and 1 GiB is tight.
+# Secrets are never in this file: /run/nami/env is written at start by fetch-secrets.sh from Key Vault (tmpfs, mode 600).
+services:
+  nami:
+    image: nami:local                       # built on your machine and loaded with push-image.sh (no registry to pay for)
+    restart: unless-stopped
+    env_file: [/opt/nami/nami.env, /run/nami/env]
+    volumes: ["/var/lib/nami:/srv/data"]    # the SQLite files; Litestream replicates them to Blob
+    expose: ["8000"]
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}     # logs are capped: the agent is chatty and the disk is small
+    mem_limit: 700m
+    memswap_limit: 1500m                    # the host has a 2 GiB swap file: a short spike is slow, not an OOM kill
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment: [FQDN]
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddy_data:/data"]
+    depends_on: [nami]
+    logging: {driver: json-file, options: {max-size: "10m", max-file: "3"}}
+    mem_limit: 80m
+volumes:
+  caddy_data:

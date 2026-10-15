@@ -1,0 +1,100 @@
+# Hints only: where to check login state and how a site authenticates. Never scripts.
+# Names a user may say that are the same login as another site. Gmail signs in on google.com (mail.google.com,
+# accounts.google.com): its session cookies are on google.com, never on gmail.com.
+aliases:
+  gmail.com: google.com
+  googlemail.com: google.com
+  openrouter.com: openrouter.ai     # people (and models) say .com or .io; the site, its API and its login are openrouter.ai
+  openrouter.io: openrouter.ai
+default:
+  login_patterns: ["/login", "/signin", "/sign-in", "accounts.google.com", "/auth"]
+sites:
+  swiggy.com:
+    auth_check_url: https://www.swiggy.com/my-account
+  vercel.com:
+    auth_check_url: https://vercel.com/dashboard
+    google_signin: true
+    human_step: google
+    notes: ["Vercel often signs in with Google, which blocks automated sign-in. If your Vercel account also has an email login, save that; otherwise you can sign in once in a secure window."]
+  openrouter.ai:
+    auth_check_url: https://openrouter.ai/settings/credits
+    google_signin: true
+    human_step: google
+    notes: ["With a saved API key I can check credits, list models, and generate text, images, video or speech (I always ask before spending credits)."]
+    # API path, used instead of the browser when the user saved an API key for this site. Read endpoints are GET and run
+    # without asking. `kind: generate` endpoints are POST, may spend credits, and ALWAYS wait for the user's approval.
+    # The model only picks an endpoint NAME and fills the declared params; paths, hosts and body shapes live here.
+    # UNVERIFIED against the live API: paths, body fields, default models and response shapes follow OpenRouter's public docs
+    # and have not been called.
+    api:
+      base: https://openrouter.ai/api/v1
+      auth: bearer          # how the key is sent: bearer | {kind: header, name: x-api-key, extra_headers: {...}} | basic | {kind: query, name: key} | auto (work it out, ask first)
+      endpoints:
+        credits: {path: /credits, summary: "credit balance and total usage"}
+        models:  {path: /models,  summary: "the models available to this account"}
+        key:     {path: /key,     summary: "limits and usage of the saved API key"}
+        text:
+          kind: generate
+          method: POST
+          path: /chat/completions
+          summary: "write text (an answer, a draft, a poem) with an AI model"
+          params:
+            prompt: {required: true, max_len: 4000, desc: "what to write"}
+            model: {default: "openai/gpt-4o-mini", pattern: '^[A-Za-z0-9._:/-]{1,80}$', desc: "model id, only if the user named one"}
+          body: {model: "{model}", max_tokens: 800, messages: [{role: user, content: "{prompt}"}]}
+          output: text
+          result_path: choices.0.message.content
+        image:
+          kind: generate
+          method: POST
+          path: /chat/completions
+          summary: "generate an image from a text description"
+          params:
+            prompt: {required: true, max_len: 2000, desc: "what the image should show"}
+            model: {default: "google/gemini-2.5-flash-image", pattern: '^[A-Za-z0-9._:/-]{1,80}$', desc: "image model id, only if the user named one"}
+          body: {model: "{model}", modalities: [image, text], messages: [{role: user, content: "{prompt}"}]}
+          output: image
+          result_path: choices.0.message.images
+          item_path: image_url.url
+        video:
+          kind: generate
+          method: POST
+          path: /videos
+          summary: "generate a short video from a text description (takes a few minutes)"
+          params:
+            prompt: {required: true, max_len: 2000, desc: "what the video should show"}
+            model: {default: "google/veo-3.1", pattern: '^[A-Za-z0-9._:/-]{1,80}$', desc: "video model id, only if the user named one"}
+            resolution: {enum: ["480p", "720p", "1080p"], desc: "only if the user asked"}
+            aspect_ratio: {enum: ["16:9", "9:16", "1:1"], desc: "only if the user asked"}
+            duration: {type: int, min: 1, max: 12, desc: "seconds, only if the user asked"}
+          body: {model: "{model}", prompt: "{prompt}", resolution: "{resolution}", aspect_ratio: "{aspect_ratio}", duration: "{duration}"}
+          output: video
+          job: {id_path: id, poll_path: "/videos/{id}", status_path: status, done: [completed], failed: [failed, cancelled, expired],
+                result_path: unsigned_urls, interval: 10, timeout: 600}
+        speech:
+          kind: generate
+          method: POST
+          path: /audio/speech
+          summary: "turn text into spoken audio (text to speech)"
+          params:
+            prompt: {required: true, max_len: 3000, desc: "the exact text to speak"}
+            model: {default: "openai/gpt-4o-mini-tts", pattern: '^[A-Za-z0-9._:/-]{1,80}$', desc: "speech model id, only if the user named one"}
+            voice: {default: alloy, pattern: '^[a-z]{3,20}$', desc: "voice name, only if the user asked"}
+          body: {model: "{model}", input: "{prompt}", voice: "{voice}", response_format: mp3}
+          output: audio
+  google.com:
+    auth_check_url: https://myaccount.google.com/
+    # Measured: signed out, myaccount.google.com redirects to https://www.google.com/account/about/ (NOT to accounts.google.com),
+    # and drive.google.com goes to accounts.google.com/.../accountchooser. Signed in, the URL stays on myaccount.google.com.
+    signed_out_patterns: ["/account/about", "/accountchooser", "/signin/"]
+    expect_url: myaccount.google.com
+    human_step: google
+    notes: ["Google blocks automated sign-in by policy. For Gmail and Drive, use Connect Google; for anything else you can sign in once in a secure window."]
+  anthropic.com:
+    notes: ["With a saved API key I can list the models your key can use."]
+    # UNVERIFIED against the live API: follows Anthropic's public docs (x-api-key plus a version header).
+    api:
+      base: https://api.anthropic.com/v1
+      auth: {kind: header, name: x-api-key, extra_headers: {anthropic-version: "2023-06-01"}}
+      endpoints:
+        models: {path: /models, summary: "the models available to this key"}

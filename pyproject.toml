@@ -1,0 +1,52 @@
+[project]
+name = "nami"
+version = "0.1.0"
+description = "Chat assistant for browser tasks with a secure credentials vault"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy[asyncio]>=2.0.30",
+    "aiosqlite>=0.20",
+    "alembic>=1.13",
+    "pydantic-settings>=2.3",
+    "redis>=5.0",
+    "numpy>=1.26",
+    "cryptography>=50.0.2",
+    "pyotp>=2.10.0",
+    "tldextract>=5.4.0",
+    "playwright>=1.63.0",
+    "kernel>=0.119.0",
+    "openai>=1.50",
+    "slack-bolt>=1.20",
+    "aiohttp>=3.9",
+    "chainlit>=2.12.0",
+    "browser-use>=0.11.13",
+    "langgraph>=1.2.12",
+    "langgraph-checkpoint-sqlite>=3.1.1",
+    "anthropic>=0.125.0",
+    "httpx>=0.28.1",
+    "uvicorn>=0.54.0",
+    "pyyaml>=6.0.3",
+    "azure-keyvault-keys>=4.11.3",
+    "azure-identity>=1.26.0",
+    "fastapi>=0.115",
+    "starlette>=0.40",
+    "pydantic>=2.7",
+    "pyjwt>=2.8",
+    "opentelemetry-sdk>=1.30",
+    "opentelemetry-exporter-otlp-proto-http>=1.30",
+    "pypdf>=6.1",
+]
+
+[project.optional-dependencies]
+# Local CPU embeddings (BAAI/bge-small-en-v1.5, 384-d). Without it, a hashing embedder is used.
+embeddings = ["fastembed>=0.4"]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.24", "fakeredis>=2.26"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = ["browser: needs a local Chromium (uv run playwright install chromium)"]
+pythonpath = ["."]
